@@ -33,7 +33,7 @@ bool IsAlreadyRegistered(ComponentUpdateService* cus) {
                    component_ids.end(),
                    kWidevineComponentId) != component_ids.end();
 }
-
+#if !defined(OS_LINUX)
 content::WebContents* GetActiveWebContents() {
   if (Browser* browser = chrome::FindLastActive())
     return browser->tab_strip_model()->GetActiveWebContents();
@@ -44,6 +44,7 @@ void ReloadIfActive(content::WebContents* web_contents) {
   if (GetActiveWebContents() == web_contents)
     web_contents->GetController().Reload(content::ReloadType::NORMAL, false);
 }
+#endif
 
 }  // namespace
 
@@ -85,17 +86,24 @@ void BraveDrmTabHelper::OnWidevineKeySystemAccessRequest() {
 
   if (ShouldShowWidevineOptIn() && !is_permission_requested_) {
     is_permission_requested_ = true;
-    RequestWidevinePermission(web_contents());
+    RequestWidevinePermission(web_contents(), false /* for_restart */);
   }
 }
 
 void BraveDrmTabHelper::OnEvent(Events event, const std::string& id) {
   if (event == ComponentUpdateService::Observer::Events::COMPONENT_UPDATED &&
       id == kWidevineComponentId) {
+#if defined(OS_LINUX)
+    // Ask restart instead of reloading. Widevine is only usable after
+    // restarting on linux.
+    RequestWidevinePermission(web_contents(), true /* for_restart*/);
+#else
     // When widevine is ready to use, only active tab that requests widevine is
-    // reloaded automatically. Then, stop observing component update.
+    // reloaded automatically.
     if (is_widevine_requested_)
       ReloadIfActive(web_contents());
+#endif
+    // Stop observing component update event.
     observer_.RemoveAll();
   }
 }

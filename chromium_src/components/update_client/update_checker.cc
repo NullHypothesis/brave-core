@@ -43,6 +43,8 @@ void SequentialUpdateChecker::CheckForUpdates(
   enabled_component_updates_ = enabled_component_updates;
   update_check_callback_ = std::move(update_check_callback);
 
+  CheckNext();
+
   VLOG(3) << "< CheckForUpdates";
 }
 
